@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Penny Pages</title>
+<meta name="theme-color" content="#f1efed">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Penny Pages">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+/* Layout: four views on a pale counter — a receipt printer (print), scrapbooks of pasted receipts that flip page by page (book), one long summary receipt (totals) and a settings receipt (edit). Deliberately single-theme: receipts are white paper; accent, counter and page colours are user-editable. */
+:root{
+  --counter:#f1efed; --paper:#ffffff; --page:#fcfbf8; --ink:#262326; --faint:#8d8890; --rule:#d4cfd2;
+  --blush:#ff8fb1; --blush-d:#e8628d;
+  --display:"Press Start 2P", ui-monospace, "Courier New", monospace;
+  --body:"VT323", ui-monospace, "Courier New", monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{background:var(--counter)}
+body{color:var(--ink);font-family:var(--body);font-size:21px;line-height:1.2;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:22px 56px}
+button{font-family:inherit;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px dashed var(--blush-d);outline-offset:3px}
+
+/* header + tabs */
+.top{max-width:920px;margin:0 auto 22px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand canvas{width:32px;height:32px;image-rendering:pixelated}
+.brand h1{font-family:var(--display);font-weight:400;font-size:13px;letter-spacing:.06em;margin:0;line-height:1.5}
+.brand p{margin:0;color:var(--faint);font-size:17px}
+.tabs{display:flex;gap:4px;background:var(--paper);padding:4px;border:2px solid var(--ink)}
+.tabs button{background:none;border:0;padding:5px 12px;font-size:20px;cursor:pointer}
+.tabs button[aria-current="page"]{background:var(--ink);color:var(--paper)}
+
+/* shared slip (big receipt) */
+.sw{max-width:460px;margin:0 auto;filter:drop-shadow(0 6px 14px rgba(40,30,40,.08)) drop-shadow(0 1px 2px rgba(40,30,40,.1))}
+.sw.wide{max-width:560px}
+.slip{background:var(--paper);padding:30px 26px 34px;--z:10px}
+.zig{-webkit-mask:conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) top/var(--z) 51% repeat-x,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/var(--z) 51% repeat-x;
+  mask:conic-gradient(from 135deg at top,#0000,#000 1deg 89deg,#0000 90deg) top/var(--z) 51% repeat-x,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/var(--z) 51% repeat-x}
+hr{border:0;border-top:2px dashed var(--rule);margin:16px 0}
+.lbl{font-family:var(--display);font-size:8px;letter-spacing:.12em;color:var(--faint);margin-bottom:10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.c{text-align:center}.faint{color:var(--faint)}
+.line{display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
+.line>span:first-child{min-width:0}
+.line .dots{flex:1;border-bottom:2px dotted var(--rule);transform:translateY(-5px);min-width:12px}
+.line .r{white-space:nowrap}
+.sub{color:var(--faint);font-size:17px;margin:-2px 0 8px}
+.big{font-family:var(--display);font-size:13px;padding-block:4px}
+.big .dots{border-color:transparent}
+
+/* form */
+form{display:grid;gap:12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row>*{min-width:0}
+label{font-family:var(--display);font-size:8px;letter-spacing:.1em;color:var(--faint);display:grid;gap:5px}
+input,select{font-family:var(--body);font-size:21px;color:var(--ink);background:transparent;border:0;border-bottom:2px solid var(--ink);padding:3px 0;border-radius:0;width:100%;min-width:0}
+select{cursor:pointer}
+input::placeholder{color:#bdb8bc}input:focus,select:focus{outline:none;border-bottom-color:var(--blush-d)}
+input[type="color"]{width:36px;height:36px;padding:0;border:2px solid var(--ink);background:var(--paper);cursor:pointer;flex:none}
+input[type="color"]::-webkit-color-swatch-wrapper{padding:2px}input[type="color"]::-webkit-color-swatch{border:0}
+input[type="color"]::-moz-color-swatch{border:0}
+.cats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.cats button{display:flex;align-items:center;gap:6px;background:transparent;border:2px solid var(--rule);padding:4px 6px;font-size:19px;cursor:pointer;min-width:0;text-align:left}
+.cats button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cats button img{width:16px;height:16px;image-rendering:pixelated;flex:none;padding:2px;box-sizing:content-box}
+.cats button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.go{font-family:var(--display);font-size:10px;letter-spacing:.08em;background:var(--ink);color:var(--paper);border:0;padding:13px;cursor:pointer}
+.go:active{background:var(--blush-d)}
+.link{font-size:19px;color:var(--faint);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.link:hover,.link[aria-pressed="true"]{color:var(--ink)}
+.link[aria-pressed="true"]{text-decoration-style:solid}
+
+/* printer */
+.printer{max-width:400px;margin:28px auto 0}
+.slot{height:16px;background:var(--ink);border-radius:8px;position:relative;z-index:2;box-shadow:inset 0 -5px 0 #000}
+.paperout{margin:-8px 22px 0;position:relative;z-index:1}
+.paperout .rw{animation:print 1.1s steps(14) both}
+@keyframes print{from{clip-path:inset(0 0 100% 0);transform:translateY(-30px)}to{clip-path:inset(0 0 0 0);transform:none}}
+.recent{max-width:920px;margin:34px auto 0}
+.recent .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px;align-items:start}
+.recent .rcpt{font-size:12px}
+
+/* single receipt */
+.rw{filter:drop-shadow(0 3px 6px rgba(40,30,40,.1)) drop-shadow(0 1px 1px rgba(40,30,40,.12));position:relative}
+.rw[data-open]{cursor:pointer}
+.rcpt{--z:.6em;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:20px;line-height:1.15;padding:1.4em 1.1em 1.5em}
+.r-top{display:grid;justify-items:center;gap:.35em;text-align:center}
+.r-ico{width:2.2em;height:2.2em;background:var(--tint);display:grid;place-items:center}
+.r-ico img{width:1.3em;height:1.3em;image-rendering:pixelated}
+.shop{font-family:var(--display);font-size:.55em;letter-spacing:.08em;line-height:1.5;overflow-wrap:anywhere}
+.r-meta{color:var(--faint);font-size:.8em;font-variant-numeric:tabular-nums}
+.r-rule{border-top:.1em dashed var(--rule);margin:.6em 0}
+.r-line{display:flex;justify-content:space-between;gap:.6em;font-variant-numeric:tabular-nums}
+.r-line>span:first-child{min-width:0;overflow-wrap:anywhere}
+.r-sm{font-size:.8em;color:var(--faint)}
+.r-total{font-family:var(--display);font-size:.6em;padding-top:.15em}
+.r-bc{display:flex;justify-content:center;gap:.12em;height:1.9em;margin:.8em 0 .35em}
+.r-bc i{background:var(--ink);display:block}
+.r-foot{text-align:center;color:var(--faint);font-size:.75em}
+.mini .nt,.page .nt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* book */
+.bookwrap{max-width:920px;margin:0 auto}
+.shelf{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:18px}
+.spine{display:flex;align-items:center;gap:8px;background:var(--paper);border:2px solid var(--rule);padding:4px 10px 4px 4px;cursor:pointer;font-size:19px;max-width:100%}
+.spine i{width:14px;height:24px;background:var(--bc);border:2px solid var(--ink);flex:none}
+.spine span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.spine[aria-pressed="true"]{border-color:var(--ink)}
+.bookview{display:flex;justify-content:center;perspective:1600px}
+.spread{display:grid;grid-template-columns:1fr 1fr;width:100%;box-shadow:0 14px 30px rgba(40,30,40,.14),0 2px 4px rgba(40,30,40,.1)}
+.solo{width:min(100%,440px);box-shadow:0 14px 30px rgba(40,30,40,.14),0 2px 4px rgba(40,30,40,.1)}
+.page{aspect-ratio:3/4;background:var(--page);background-image:radial-gradient(rgba(38,35,38,.1) 1px,transparent 1px);background-size:5cqw 5cqw;position:relative;container-type:inline-size;overflow:hidden;padding:7cqw 7cqw 11cqw;display:flex;flex-direction:column;gap:4cqw;min-width:0}
+.spread .page:first-child{box-shadow:inset -22px 0 24px -20px rgba(40,30,40,.25)}
+.spread .page:last-child{box-shadow:inset 22px 0 24px -20px rgba(40,30,40,.25)}
+.page.blank{background-image:none}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:2cqw;border-bottom:.5cqw solid var(--ink);padding-bottom:2cqw}
+.ph b{font-family:var(--display);font-weight:400;font-size:3cqw;letter-spacing:.06em}
+.ph span{font-size:4.6cqw;font-variant-numeric:tabular-nums}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6cqw 5cqw;align-items:start;padding-top:2cqw}
+.page .rcpt{font-size:3.3cqw}
+.pgrid .rw{transform:rotate(var(--rot))}
+.pgrid .rw::after{content:"";position:absolute;top:-2cqw;left:50%;width:15cqw;height:4cqw;transform:translateX(-50%) rotate(-4deg);background:var(--tint);opacity:.7}
+.pn{position:absolute;bottom:4cqw;left:0;right:0;text-align:center;font-size:4cqw;color:var(--faint)}
+.cover{background:var(--bc);background-image:none;justify-content:center;align-items:center;text-align:center;gap:6cqw}
+.cover canvas{width:24cqw;height:24cqw;image-rendering:pixelated}
+.cover h2{font-family:var(--display);font-weight:400;font-size:6cqw;line-height:1.5;margin:0;letter-spacing:.06em;overflow-wrap:anywhere;max-width:100%}
+.tag{background:var(--paper);border:.6cqw solid var(--ink);padding:4cqw 6cqw;font-size:5cqw;display:grid;gap:1cqw;min-width:60%;max-width:100%}
+.tag b{font-family:var(--display);font-weight:400;font-size:3cqw;letter-spacing:.1em;overflow-wrap:anywhere}
+.toc{display:grid;gap:2.5cqw;font-size:5cqw;overflow:auto}
+.toc button{background:none;border:0;padding:0;cursor:pointer;display:flex;align-items:baseline;gap:2cqw;width:100%;text-align:left}
+.toc .dots{flex:1;border-bottom:.5cqw dotted var(--rule);transform:translateY(-1cqw)}
+.toc small{color:var(--faint)}
+.ttl{font-family:var(--display);font-size:4cqw;letter-spacing:.1em;margin:0 0 2cqw;font-weight:400}
+.bookbar{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:20px;flex-wrap:wrap}
+.pill{background:var(--paper);border:2px solid var(--ink);padding:4px 14px;font-size:20px;cursor:pointer}
+.pill:disabled{opacity:.3;cursor:default}
+.pg{min-width:120px;text-align:center;font-variant-numeric:tabular-nums}
+.out-next{animation:outN .17s ease-in forwards}.in-next{animation:inN .2s ease-out}
+.out-prev{animation:outP .17s ease-in forwards}.in-prev{animation:inP .2s ease-out}
+@keyframes outN{to{transform:rotateY(-28deg) translateX(-30px);opacity:0}}
+@keyframes inN{from{transform:rotateY(28deg) translateX(30px);opacity:0}}
+@keyframes outP{to{transform:rotateY(28deg) translateX(30px);opacity:0}}
+@keyframes inP{from{transform:rotateY(-28deg) translateX(-30px);opacity:0}}
+
+/* stats charts */
+.vb{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:6px;align-items:end;height:100px;border-bottom:2px solid var(--ink)}
+.vc{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:3px;min-width:0}
+.vc .blk{width:100%;max-width:24px;background:repeating-linear-gradient(0deg,var(--ink) 0 4px,var(--paper) 4px 6px);min-height:2px}
+.vc.hi .blk{background:repeating-linear-gradient(0deg,var(--blush) 0 4px,var(--paper) 4px 6px)}
+.vc .amt{font-size:14px;color:var(--faint);white-space:nowrap}
+.vl{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:6px;text-align:center;font-size:15px;color:var(--faint);margin-top:4px}
+.vl span{min-width:0;overflow:hidden;white-space:nowrap}
+.cat{display:grid;grid-template-columns:20px 74px 1fr auto;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
+.cat>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat img{width:14px;height:14px;image-rendering:pixelated;padding:3px;box-sizing:content-box}
+.cat .bar{letter-spacing:-1px;font-size:18px}
+.cat .bar b{font-weight:400;color:var(--rule)}
+.meter{display:flex;gap:3px;margin:8px 0 4px}
+.meter i{flex:1;height:10px;border:2px solid var(--ink)}
+.meter i.on{background:var(--ink)}
+.meter.low i.on{background:var(--blush-d);border-color:var(--blush-d)}
+.tools{display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center}
+textarea{width:100%;min-height:80px;font-family:var(--body);font-size:15px;color:var(--ink);background:var(--counter);border:0;padding:8px;margin-top:8px}
+.note{border:2px dashed var(--rule);padding:8px 10px;font-size:18px;display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:center}
+.empty{color:var(--faint);text-align:center;padding:12px 0}
+
+/* editor */
+.erows{display:grid;gap:10px}
+.erow{display:grid;grid-template-columns:40px 1fr 36px 26px;gap:10px;align-items:center}
+.erow>*{min-width:0}
+.efields{display:grid;gap:2px}
+.efields input{font-size:20px;padding:1px 0}
+.efields input.sm{font-size:16px;color:var(--faint);border-bottom-width:1px}
+.icobtn{width:40px;height:40px;border:2px solid var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+.icobtn img{width:20px;height:20px;image-rendering:pixelated}
+.del{background:none;border:0;color:#b9b3b7;font-size:20px;cursor:pointer;padding:0}
+.del:hover{color:var(--blush-d)}
+.icongrid{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;padding:6px 0 4px}
+.icongrid button{width:34px;height:34px;border:2px solid var(--rule);background:var(--paper);display:grid;place-items:center;cursor:pointer;padding:0}
+.icongrid button[aria-pressed="true"]{border-color:var(--ink)}
+.icongrid img{width:16px;height:16px;image-rendering:pixelated}
+.confirm{grid-column:1/-1;border:2px dashed var(--rule);padding:6px 10px;font-size:18px;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;justify-content:space-between}
+.bmeta{font-size:16px;color:var(--faint);display:flex;gap:10px;flex-wrap:wrap}
+.crow{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.swatches button{width:22px;height:22px;border:2px solid var(--ink);cursor:pointer;padding:0}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(38,35,38,.45);display:grid;place-items:center;z-index:20;padding:20px max(16px,env(safe-area-inset-right,0px)) 20px max(16px,env(safe-area-inset-left,0px));overflow:auto}
+.modal .box{width:min(100%,340px);display:grid;gap:14px}
+.modal .acts{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);font-family:var(--display);font-size:9px;letter-spacing:.08em;padding:10px 14px;z-index:30;white-space:nowrap}
+@media(max-width:420px){.slip{padding-inline:18px}.cats{grid-template-columns:repeat(2,1fr)}.tabs button{padding:5px 7px;font-size:18px}}
+@media(prefers-reduced-motion:reduce){.paperout .rw,.out-next,.in-next,.out-prev,.in-prev{animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><canvas id="logo" width="16" height="16" aria-hidden="true"></canvas>
+    <div><h1>PENNY PAGES</h1><p>every rupee gets a receipt</p></div></div>
+  <nav class="tabs" aria-label="Views">
+    <button type="button" data-v="add">print</button>
+    <button type="button" data-v="book">book</button>
+    <button type="button" data-v="stats">totals</button>
+    <button type="button" data-v="edit">edit</button>
+  </nav>
+</header>
+
+<section id="v-add" hidden>
+  <div class="sw"><div class="slip zig">
+    <div class="lbl"><span>NEW RECEIPT</span><span id="clock"></span></div>
+    <form id="f">
+      <div class="row">
+        <label for="amt">AMOUNT ₹<input id="amt" inputmode="decimal" type="number" min="0" step="0.01" placeholder="120" required></label>
+        <label for="date">DATE<input id="date" type="date" required></label>
+      </div>
+      <div class="row">
+        <label for="note">WHAT FOR<input id="note" maxlength="40" placeholder="chai with friends"></label>
+        <label for="bookSel">BOOK<select id="bookSel"></select></label>
+      </div>
+      <div class="cats" id="cats" role="group" aria-label="Category"></div>
+      <button class="go" type="submit">PRINT RECEIPT</button>
+    </form>
+  </div></div>
+  <div class="printer"><div class="slot"></div><div class="paperout" id="printOut"></div></div>
+  <div class="recent">
+    <div class="lbl"><span id="recentLbl">RECENT RECEIPTS</span><span class="note" id="sampleNote" hidden style="border:0;padding:0;font-family:var(--body);font-size:17px;letter-spacing:0">sample receipts shown · <button class="link" id="clearSamples" type="button">clear them</button></span></div>
+    <div class="grid mini" id="recent"></div>
+  </div>
+</section>
+
+<section id="v-book" hidden>
+  <div class="bookwrap">
+    <div class="shelf" id="shelf" role="group" aria-label="Choose a book"></div>
+    <div class="bookview" id="bookView"></div>
+    <div class="bookbar">
+      <button class="pill" type="button" id="prev" aria-label="Previous page">◀ back</button>
+      <span class="pg" id="pgLbl"></span>
+      <button class="pill" type="button" id="next" aria-label="Next page">next ▶</button>
+    </div>
+    <div class="tools" style="margin-top:12px"><button class="link" type="button" id="toCover">cover</button><button class="link" type="button" id="toToday">latest page</button><button class="link" type="button" data-goview="edit">edit books</button></div>
+  </div>
+</section>
+
+<section id="v-stats" hidden>
+  <div class="sw"><div class="slip zig">
+    <div class="c"><div class="lbl" style="justify-content:center">SUMMARY</div><div class="faint" id="stamp"></div></div>
+    <label for="scope" style="margin-top:12px">SHOWING<select id="scope"></select></label>
+    <hr>
+    <div class="line"><span>Today</span><span class="dots"></span><span class="r" id="sToday"></span></div>
+    <div class="sub" id="sTodayN"></div>
+    <div class="line"><span>This week</span><span class="dots"></span><span class="r" id="sWeek"></span></div>
+    <div class="sub" id="sWeekN"></div>
+    <div class="line"><span>This month</span><span class="dots"></span><span class="r" id="sMonth"></span></div>
+    <div class="sub" id="sMonthN"></div>
+    <div class="line"><span>All time</span><span class="dots"></span><span class="r" id="sAll"></span></div>
+    <div class="sub" id="sAllN"></div>
+    <hr>
+    <div class="lbl">AVERAGES</div>
+    <div class="line"><span>Per day, this month</span><span class="dots"></span><span class="r" id="aDay"></span></div>
+    <div class="line"><span>Per spending day</span><span class="dots"></span><span class="r" id="aActive"></span></div>
+    <div class="line"><span>Per week</span><span class="dots"></span><span class="r" id="aWeek"></span></div>
+    <div class="line"><span>Per month</span><span class="dots"></span><span class="r" id="aMonth"></span></div>
+    <div class="line"><span>Per receipt</span><span class="dots"></span><span class="r" id="aRcpt"></span></div>
+    <div class="sub" style="margin-top:6px" id="aNote"></div>
+    <hr>
+    <div class="lbl">MOST & LEAST</div>
+    <div class="line"><span>Biggest receipt</span><span class="dots"></span><span class="r" id="mBig"></span></div>
+    <div class="sub" id="mBigN"></div>
+    <div class="line"><span>Priciest day</span><span class="dots"></span><span class="r" id="mDay"></span></div>
+    <div class="sub" id="mDayN"></div>
+    <div class="line"><span>No-spend days</span><span class="dots"></span><span class="r" id="mZero"></span></div>
+    <div class="sub">this month so far</div>
+    <hr>
+    <div class="line big"><span>BUDGET LEFT</span><span class="dots"></span><span class="r" id="sLeft"></span></div>
+    <div class="meter" id="meter" aria-hidden="true"></div>
+    <div class="sub" id="sBudgetTxt"></div>
+    <form id="bf" class="row" style="align-items:end;margin-top:8px">
+      <label for="budget">MONTHLY BUDGET ₹ · ALL BOOKS<input id="budget" type="number" min="0" step="1" placeholder="15000"></label>
+      <button class="go" type="submit" style="padding:10px">SET</button>
+    </form>
+    <hr>
+    <div class="lbl">DAILY · LAST 7 DAYS</div><div id="cDay"></div>
+    <hr>
+    <div class="lbl">WEEKLY · LAST 8 WEEKS</div><div id="cWeek"></div>
+    <hr>
+    <div class="lbl">MONTHLY · LAST 6 MONTHS</div><div id="cMonth"></div>
+    <hr>
+    <div class="lbl"><span>BY CATEGORY</span><span class="tools" style="gap:10px" id="catPer">
+      <button class="link" type="button" data-p="week">week</button><button class="link" type="button" data-p="month">month</button><button class="link" type="button" data-p="all">all</button></span></div>
+    <div id="cCat" style="display:grid;gap:5px"></div>
+    <hr>
+    <div class="c faint">saved on this device only · works offline</div>
+  </div></div>
+</section>
+
+<section id="v-edit" hidden>
+  <div class="sw wide"><div class="slip zig">
+    <div class="c"><div class="lbl" style="justify-content:center">EDIT</div><div class="faint">changes save as you type</div></div>
+    <hr>
+    <div class="lbl"><span>BOOKS</span><button class="link" type="button" id="addBook">+ new book</button></div>
+    <div class="erows" id="bookRows"></div>
+    <hr>
+    <div class="lbl"><span>CATEGORIES</span><button class="link" type="button" id="addCat">+ new category</button></div>
+    <div class="sub">tap an icon to change it · top line is the name, bottom line is the shop on the receipt</div>
+    <div class="erows" id="catRows"></div>
+    <hr>
+    <div class="lbl"><span>COLOURS</span><button class="link" type="button" id="resetTheme">reset</button></div>
+    <div class="erows" id="themeRows"></div>
+    <hr>
+    <div class="lbl">BACKUP</div>
+    <div class="tools">
+      <button class="link" type="button" id="copyB">copy backup</button>
+      <button class="link" type="button" id="restoreB">restore backup</button>
+      <button class="link" type="button" id="wipe">erase all receipts</button>
+    </div>
+    <div id="restoreBox" hidden><textarea id="restoreTxt" placeholder="paste your backup here"></textarea>
+      <div class="tools"><button class="link" type="button" id="restoreGo">load this backup</button></div></div>
+    <div id="wipeBox" hidden class="note" style="margin-top:10px"><span>Erase every receipt in every book? This can't be undone.</span>
+      <span class="tools"><button class="link" type="button" id="wipeYes" style="color:var(--blush-d)">erase</button><button class="link" type="button" id="wipeNo">keep</button></span></div>
+  </div></div>
+</section>
+
+<div class="modal" id="modal" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-label="Receipt">
+    <div id="modalR"></div>
+    <div class="acts" id="modalActs"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const ICONS={
+ food:["..x.x...",".x.x....","xxxxxx..","x....xx.","x....x.x","x....xx.",".xxxx...","xxxxxxx."],
+ travel:[".xxxxxx.","xx.xx.xx","xx.xx.xx","xxxxxxxx","x.xxxx.x","xxxxxxxx",".x....x.","........"],
+ shop:["..xxxx..",".x....x.","xxxxxxxx","x......x","x......x","x......x","x......x","xxxxxxxx"],
+ bills:["....xx..","...xx...","..xx....",".xxxxx..","...xx...","..xx....",".xx.....","x......."],
+ fun:["...x....","...x....","xxxxxxx.",".xxxxx..","..xxx...",".xx.xx..",".x...x..","........"],
+ study:["xxxxxxxx","x..xx..x","x..xx..x","x..xx..x","x..xx..x","x..xx..x","xxxxxxxx","...xx..."],
+ health:["..xxxx..","..x..x..","xxx..xxx","x......x","x......x","xxx..xxx","..x..x..","..xxxx.."],
+ gifts:["..x.x...","...x....","xxxxxxx.","x..x..x.","xxxxxxx.","x..x..x.","x..x..x.","xxxxxxx."],
+ other:["..xxxx..",".x....x.","x..xx..x","x.x....x","x.x....x","x..xx..x",".x....x.","..xxxx.."],
+ home:["...xx...","..xxxx..",".xxxxxx.","xxxxxxxx",".x....x.",".x.xx.x.",".x.xx.x.",".xxxxxx."],
+ heart:[".xx.xx..","xxxxxxx.","xxxxxxx.","xxxxxxx.",".xxxxx..","..xxx...","...x....","........"],
+ music:["..xxxxxx","..x....x","..x....x","..x....x",".xx...xx","xxx..xxx","xx...xx.","........"],
+ paw:[".x.x.x..","........","x.....x.","..xxx...",".xxxxx..",".xxxxx..","..x.x...","........"],
+ coffee:["........","xxxxxx..","x....xxx","x....x.x","x....xxx",".xxxx...","........","xxxxxxx."],
+ phone:[".xxxxx..",".x...x..",".x...x..",".x...x..",".x...x..",".xxxxx..",".xx.xx..",".xxxxx.."],
+ plant:["...x.x..","..xx.xx.",".xx.x...","....x...","..xxxxx.","..x...x.","..x...x.","...xxx.."]};
+const ICON_URL={};
+for(const k in ICONS){const cv=document.createElement("canvas");cv.width=cv.height=8;const g=cv.getContext("2d");g.fillStyle="#262326";
+  ICONS[k].forEach((r,y)=>[...r].forEach((ch,x)=>{if(ch!==".")g.fillRect(x,y,1,1);}));ICON_URL[k]=cv.toDataURL();}
+const ico=k=>ICON_URL[k]||ICON_URL.other;
+const DEF_CATS=[
+ {id:"food",name:"Food",shop:"THE SNACK SHACK",tint:"#ffd6e2",icon:"food"},
+ {id:"travel",name:"Travel",shop:"RIDE & ROAM",tint:"#d4e8ff",icon:"travel"},
+ {id:"shop",name:"Shopping",shop:"LITTLE BAG CO.",tint:"#e6dbff",icon:"shop"},
+ {id:"bills",name:"Bills",shop:"THE BILL DESK",tint:"#fff0b8",icon:"bills"},
+ {id:"fun",name:"Fun",shop:"FUN HOUSE",tint:"#cdf3e4",icon:"fun"},
+ {id:"study",name:"Study",shop:"BOOK NOOK",tint:"#ffe1cc",icon:"study"},
+ {id:"health",name:"Health",shop:"WELL & GOOD",tint:"#d9f4f7",icon:"health"},
+ {id:"gifts",name:"Gifts",shop:"THE GIFT BOX",tint:"#ffdcef",icon:"gifts"},
+ {id:"other",name:"Other",shop:"ODDS & ENDS",tint:"#ece8ea",icon:"other"}];
+const DEF_THEME={accent:"#ff8fb1",counter:"#f1efed",page:"#fcfbf8"};
+const PASTELS=["#ffd6e2","#d4e8ff","#e6dbff","#fff0b8","#cdf3e4","#ffe1cc","#d9f4f7","#ffdcef","#e3f5c8","#f5e1c8"];
+const LOST={id:"_",name:"Uncategorised",shop:"ODDS & ENDS",tint:"#ece8ea",icon:"other"};
+
+const KEY="piggy-pixel-v1";
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse=s=>new Date(s+"T00:00");
+const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
+const short=n=>n>=100000?(n/100000).toFixed(1).replace(/\.0$/,"")+"L":n>=1000?(n/1000).toFixed(1).replace(/\.0$/,"")+"k":String(Math.round(n));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sum=a=>a.reduce((s,i)=>s+ +i.amt,0);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const MON=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const DOW=["SUN","MON","TUE","WED","THU","FRI","SAT"];
+const weekStart=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x;};
+const hash=s=>{let h=2166136261;for(const ch of s)h=Math.imul(h^ch.charCodeAt(0),16777619);return h>>>0;};
+const shade=(hex,f)=>{const n=parseInt(hex.slice(1),16),r=n>>16,g=n>>8&255,b=n&255;return "#"+[r,g,b].map(v=>pad(Math.round(v*f).toString(16))).join("");};
+
+let st={items:[],budget:15000,seeded:false};
+const catOf=id=>st.cats.find(c=>c.id===id)||LOST;
+const bookOf=id=>st.books.find(b=>b.id===id)||st.books[0];
+function sample(bid){
+  const out=[],t=new Date(),pick=[["food",80,"Chai + samosa"],["travel",60,"Auto to college"],["food",240,"Lunch"],["shop",499,"Notebook set"],["fun",350,"Movie ticket"],["bills",299,"Phone recharge"],["study",180,"Printouts"],["food",150,"Coffee"],["health",120,"Vitamins"],["gifts",400,"Birthday card + gift"]];
+  for(let i=0;i<20;i++){if(i%6===4)continue;const d=new Date(t);d.setDate(t.getDate()-i);
+    for(let j=0;j<1+(i%3);j++){const p=pick[(i*3+j)%pick.length];d.setHours(9+j*4,(i*7)%60);out.push({id:uid(),amt:p[1],cat:p[0],note:p[2],date:iso(d),t:d.getTime(),book:bid,ex:true});}}
+  return out;
+}
+function migrate(){
+  if(!Array.isArray(st.cats)||!st.cats.length)st.cats=DEF_CATS.map(c=>({...c}));
+  st.cats.forEach(c=>{if(!c.icon)c.icon=ICONS[c.id]?c.id:"other";});
+  if(!Array.isArray(st.books)||!st.books.length)st.books=[{id:"b1",name:"My Spending Book",sub:"volume 01",cover:"#ffdbe6"}];
+  if(!st.books.find(b=>b.id===st.book))st.book=st.books[0].id;
+  st.theme=Object.assign({},DEF_THEME,st.theme||{});
+  st.items.forEach(i=>{if(!st.books.find(b=>b.id===i.book))i.book=st.books[0].id;});
+}
+function load(){try{const r=localStorage.getItem(KEY);if(r)st=Object.assign(st,JSON.parse(r));}catch(e){}
+  migrate();if(!st.seeded){st.items=sample(st.books[0].id);st.seeded=true;save();}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
+function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,1800);}
+function applyTheme(){const r=document.documentElement.style,t=st.theme;
+  r.setProperty("--blush",t.accent);r.setProperty("--blush-d",shade(t.accent,.82));r.setProperty("--counter",t.counter);r.setProperty("--page",t.page);}
+
+const inBook=b=>st.items.filter(i=>i.book===b);
+const ordered=a=>[...a].sort((x,y)=>x.date.localeCompare(y.date)||(x.t||0)-(y.t||0));
+let NOS={};
+function receipt(i,opts={}){
+  const c=catOf(i.cat),d=parse(i.date),tm=i.t?new Date(i.t):null;
+  let h=hash(i.id),bc="";for(let k=0;k<26;k++){h=Math.imul(h,1103515245)+12345>>>0;bc+=`<i style="width:${.08+((h>>>16)%3)*.08}em"></i>`;}
+  const rot=opts.rot?`--rot:${((hash(i.id)%7)-3)*.8}deg;`:"";
+  return `<div class="rw" style="--tint:${c.tint};${rot}" ${opts.open?`data-open="${i.id}" role="button" tabindex="0" aria-label="Open receipt ${esc(i.note||c.name)}"`:""}><article class="rcpt zig">
+    <div class="r-top"><span class="r-ico"><img src="${ico(c.icon)}" alt=""></span><span class="shop">${esc(c.shop||c.name.toUpperCase())}</span>
+    <span class="r-meta">No.${String(NOS[i.id]||0).padStart(4,"0")} · ${pad(d.getDate())} ${MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}${tm?" · "+pad(tm.getHours())+":"+pad(tm.getMinutes()):""}</span></div>
+    <div class="r-rule"></div>
+    <div class="r-line"><span class="nt">${esc(i.note||c.name.toLowerCase())}</span><span>${inr(i.amt)}</span></div>
+    <div class="r-line r-sm"><span>1 × ${esc(c.name.toLowerCase())}</span><span>${i.ex?"sample":"paid"}</span></div>
+    <div class="r-rule"></div>
+    <div class="r-line r-total"><span>TOTAL</span><span>${inr(i.amt)}</span></div>
+    <div class="r-bc" aria-hidden="true">${bc}</div>
+    <div class="r-foot">thank you ♡</div></article></div>`;
+}
+
+function drawPig(cv,worried){
+  const g=cv.getContext("2d"),P=st.theme.accent,D=shade(st.theme.accent,.82),L="#262326";
+  const m=["....LL....LL....","...LPPL..LPPL...","..LPPPPLLPPPPL..",".LPPPPPPPPPPPPL.",".LPPPPPPPPPPPPL.","LPPLLPPPPPPLLPPL","LPPPPPPPPPPPPPPL","LPPPPDDDDDDPPPPL","LPPPPDLDDLDPPPPL","LPPPPDDDDDDPPPPL","LPPPPPPPPPPPPPPL",".LPPPPPPPPPPPPL.","..LPPPPPPPPPPL..","...LLPPLLPPLL...","...LPPL..LPPL...","...LLLL..LLLL..."];
+  g.clearRect(0,0,16,16);
+  m.forEach((r,y)=>[...r].forEach((ch,x)=>{if(ch===".")return;g.fillStyle=ch==="L"?L:ch==="D"?D:P;g.fillRect(x,y,1,1);}));
+  if(worried){g.fillStyle=L;g.fillRect(4,4,1,1);g.fillRect(11,4,1,1);g.fillStyle="#9cc9ff";g.fillRect(2,6,1,2);}
+}
+
+/* ---------- PRINT ---------- */
+let cat=null,justPrinted=null;
+function drawCats(){if(!st.cats.find(c=>c.id===cat))cat=st.cats[0].id;
+  $("cats").innerHTML=st.cats.map(c=>`<button type="button" data-c="${c.id}" aria-pressed="${c.id===cat}"><img src="${ico(c.icon)}" alt="" style="background:${c.tint}"><span>${esc(c.name.toLowerCase())}</span></button>`).join("");}
+$("cats").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;cat=b.dataset.c;drawCats();});
+function drawBookSel(){$("bookSel").innerHTML=st.books.map(b=>`<option value="${b.id}" ${b.id===st.book?"selected":""}>${esc(b.name)}</option>`).join("");}
+$("bookSel").addEventListener("change",e=>{st.book=e.target.value;bookPage=0;save();render();});
+function renderAdd(){
+  const mine=inBook(st.book),byNew=[...mine].sort((a,b)=>(b.t||parse(b.date).getTime())-(a.t||parse(a.date).getTime()));
+  const last=justPrinted&&mine.find(i=>i.id===justPrinted)||byNew[0];
+  $("printOut").innerHTML=last?receipt(last,{open:true}):`<p class="empty">your first receipt prints here</p>`;
+  if(!justPrinted){const r=$("printOut").querySelector(".rw");if(r)r.style.animation="none";}
+  justPrinted=null;
+  $("recentLbl").textContent="RECENT · "+bookOf(st.book).name.toUpperCase();
+  $("recent").innerHTML=byNew.slice(last?1:0,13).map(i=>receipt(i,{open:true})).join("")||`<p class="empty">no other receipts in this book yet</p>`;
+  $("sampleNote").hidden=!st.items.some(i=>i.ex);
+}
+$("f").addEventListener("submit",e=>{e.preventDefault();const a=parseFloat($("amt").value);
+  if(!(a>0)){toast("ENTER AN AMOUNT");return;}
+  const id=uid();
+  st.items.push({id,amt:a,cat,note:$("note").value.trim(),date:$("date").value||iso(new Date()),t:Date.now(),book:st.book});
+  justPrinted=id;save();render();$("amt").value="";$("note").value="";toast("RECEIPT PRINTED");});
+$("clearSamples").onclick=()=>{st.items=st.items.filter(i=>!i.ex);save();bookPage=0;render();toast("SAMPLES CLEARED");};
+
+/* ---------- BOOK ---------- */
+let pages=[],views=[],bookPage=0,curV=0;
+function buildPages(){
+  const all=ordered(inBook(st.book));pages=[{k:"cover"},{k:"toc"}];
+  const days={};all.forEach(i=>(days[i.date]=days[i.date]||[]).push(i));
+  const months=[];
+  Object.keys(days).sort().forEach(d=>{const items=days[d],mk=d.slice(0,7);
+    if(!months.length||months[months.length-1].mk!==mk)months.push({mk,start:pages.length,total:0,n:0});
+    const m=months[months.length-1];m.total+=sum(items);m.n+=items.length;
+    for(let s=0;s<items.length;s+=4)pages.push({k:"day",d,items:items.slice(s,s+4),cont:s>0,total:sum(items)});});
+  pages.push({k:"back"});pages.months=months;pages.all=all;
+}
+function pageHTML(p,idx){
+  if(!p)return `<div class="page blank"></div>`;
+  const all=pages.all,tot=sum(all),bk=bookOf(st.book);
+  if(p.k==="cover"){const f=all[0],l=all[all.length-1];
+    const range=f?`${MON[parse(f.date).getMonth()]} ${parse(f.date).getFullYear()} – ${MON[parse(l.date).getMonth()]} ${parse(l.date).getFullYear()}`:"brand new";
+    return `<div class="page cover" style="--bc:${bk.cover}"><canvas class="coverpig" width="16" height="16" aria-hidden="true"></canvas><h2>${esc(bk.name.toUpperCase())}</h2>
+      <div class="tag"><b>${esc((bk.sub||"").toUpperCase())}</b><span>${range}</span><span>${all.length} receipts · ${inr(tot)}</span></div></div>`;}
+  if(p.k==="toc")return `<div class="page"><h3 class="ttl">CONTENTS</h3><div class="toc">${pages.months.length?pages.months.map(m=>{const[y,mo]=m.mk.split("-");
+      return `<button type="button" data-goto="${m.start}"><span>${MON[mo-1]} ${y}</span><span class="dots"></span><span>p.${m.start}</span></button><small>${m.n} receipts · ${inr(m.total)}</small>`}).join(""):`<p class="faint">No receipts in this book yet. Print one and it gets pasted in here.</p>`}</div><div class="pn">${idx}</div></div>`;
+  if(p.k==="back")return `<div class="page cover" style="--bc:${bk.cover}"><h2 style="font-size:4.5cqw">THE END<br>(FOR NOW) ♡</h2><div class="tag"><b>GRAND TOTAL</b><span>${inr(tot)}</span><span>${all.length} receipts · ${pages.length-3} pages</span></div></div>`;
+  const d=parse(p.d);
+  return `<div class="page"><div class="ph"><b>${DOW[d.getDay()]} ${pad(d.getDate())} ${MON[d.getMonth()]}${p.cont?" · CONT.":""}</b><span>${inr(p.total)}</span></div>
+    <div class="pgrid">${p.items.map(i=>receipt(i,{open:true,rot:true})).join("")}</div><div class="pn">${idx}</div></div>`;
+}
+function buildViews(){const spread=innerWidth>=760;views=[];
+  if(spread){views.push([0]);for(let i=1;i<pages.length;i+=2)views.push([i,i+1<pages.length?i+1:-1]);}
+  else pages.forEach((_,i)=>views.push([i]));
+  curV=Math.max(0,views.findIndex(v=>v.includes(bookPage)));}
+function drawShelf(){$("shelf").innerHTML=st.books.map(b=>`<button type="button" class="spine" style="--bc:${b.cover}" data-book="${b.id}" aria-pressed="${b.id===st.book}"><i></i><span>${esc(b.name)}</span></button>`).join("");}
+$("shelf").addEventListener("click",e=>{const b=e.target.closest("[data-book]");if(!b)return;st.book=b.dataset.book;bookPage=0;save();render();});
+function drawBook(){const v=views[curV],bv=$("bookView");
+  bv.innerHTML=v.length===2?`<div class="spread">${v.map(i=>pageHTML(pages[i],i)).join("")}</div>`:`<div class="solo">${pageHTML(pages[v[0]],v[0])}</div>`;
+  bv.querySelectorAll(".coverpig").forEach(c=>drawPig(c,false));
+  const real=v.filter(i=>i>=0);
+  $("pgLbl").textContent=real[0]===0?"cover":real[0]===pages.length-1?"back cover":`page ${real.join("–")} of ${pages.length-2}`;
+  $("prev").disabled=curV===0;$("next").disabled=curV===views.length-1;}
+function renderBook(){drawShelf();buildPages();buildViews();drawBook();}
+function flip(dir,target){
+  const nv=target!=null?target:curV+dir;if(nv<0||nv>=views.length||nv===curV)return;
+  const bv=$("bookView"),reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const done=()=>{curV=nv;bookPage=views[curV][0];drawBook();if(!reduce){bv.className="bookview "+(dir>0?"in-next":"in-prev");setTimeout(()=>bv.className="bookview",220);}};
+  if(reduce)return done();bv.className="bookview "+(dir>0?"out-next":"out-prev");setTimeout(done,170);}
+$("prev").onclick=()=>flip(-1);$("next").onclick=()=>flip(1);
+$("toCover").onclick=()=>flip(-1,0);
+$("toToday").onclick=()=>{const t=views.findIndex(v=>v.includes(pages.length-2));flip(t>curV?1:-1,t);};
+$("bookView").addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if(g){const t=views.findIndex(v=>v.includes(+g.dataset.goto));flip(t>curV?1:-1,t);}});
+let tx=null;$("bookView").addEventListener("touchstart",e=>tx=e.touches[0].clientX,{passive:true});
+$("bookView").addEventListener("touchend",e=>{if(tx==null)return;const dx=e.changedTouches[0].clientX-tx;tx=null;if(Math.abs(dx)>50)flip(dx<0?1:-1);});
+addEventListener("keydown",e=>{if(view!=="book"||!$("modal").hidden||e.target.matches("input,textarea,select"))return;if(e.key==="ArrowRight")flip(1);if(e.key==="ArrowLeft")flip(-1);});
+let rz;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{if(view==="book"){bookPage=views[curV]?views[curV][0]:0;buildViews();drawBook();}},150);});
+
+/* ---------- TOTALS ---------- */
+let catPer="month",scope="all";
+function vbars(vals,labels,hi){const m=Math.max(...vals,1),n=vals.length;
+  return `<div class="vb" style="--n:${n}">${vals.map((v,i)=>`<div class="vc ${i===hi?"hi":""}"><span class="amt">${v?short(v):""}</span><span class="blk" style="height:${v/m*70}px"></span></div>`).join("")}</div>
+  <div class="vl" style="--n:${n}">${labels.map(l=>`<span>${l}</span>`).join("")}</div>`;}
+function renderStats(){
+  if(scope!=="all"&&!st.books.find(b=>b.id===scope))scope="all";
+  $("scope").innerHTML=`<option value="all">all books</option>`+st.books.map(b=>`<option value="${b.id}" ${b.id===scope?"selected":""}>${esc(b.name)}</option>`).join("");
+  $("scope").value=scope;
+  const now=new Date(),today=iso(now),mk=today.slice(0,7),ws=iso(weekStart(now)),all=scope==="all"?st.items:inBook(scope);
+  $("stamp").textContent=`${DOW[now.getDay()]} ${pad(now.getDate())} ${MON[now.getMonth()]} ${now.getFullYear()} · ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const tod=all.filter(i=>i.date===today),wk=all.filter(i=>i.date>=ws&&i.date<=today),mo=all.filter(i=>i.date.startsWith(mk));
+  const n=a=>`${a.length} receipt${a.length===1?"":"s"}`;
+  $("sToday").textContent=inr(sum(tod));$("sTodayN").textContent=n(tod);
+  $("sWeek").textContent=inr(sum(wk));$("sWeekN").textContent=`${n(wk)} · since mon ${pad(weekStart(now).getDate())} ${MON[weekStart(now).getMonth()].toLowerCase()}`;
+  $("sMonth").textContent=inr(sum(mo));$("sMonthN").textContent=n(mo);
+  $("sAll").textContent=inr(sum(all));$("sAllN").textContent=n(all);
+  const mt=sum(mo),activeDays=new Set(mo.map(i=>i.date)).size;
+  $("aDay").textContent=inr(mt/now.getDate());
+  $("aActive").textContent=activeDays?inr(mt/activeDays):"—";
+  const first=all.length?ordered(all)[0].date:today,fd=parse(first);
+  const weeks=Math.max(1,Math.round((weekStart(now)-weekStart(fd))/6048e5)+1);
+  const months=Math.max(1,(now.getFullYear()-fd.getFullYear())*12+now.getMonth()-fd.getMonth()+1);
+  const tot=sum(all);
+  $("aWeek").textContent=all.length?inr(tot/weeks):"—";$("aMonth").textContent=all.length?inr(tot/months):"—";
+  $("aRcpt").textContent=all.length?inr(tot/all.length):"—";
+  $("aNote").textContent=all.length?`weekly and monthly averages cover ${weeks} week${weeks>1?"s":""} and ${months} month${months>1?"s":""} since the first receipt`:"";
+  const big=[...all].sort((a,b)=>b.amt-a.amt)[0];
+  $("mBig").textContent=big?inr(big.amt):"—";$("mBigN").textContent=big?`${big.note||catOf(big.cat).name.toLowerCase()} · ${pad(parse(big.date).getDate())} ${MON[parse(big.date).getMonth()].toLowerCase()}`:"";
+  const dt={};all.forEach(i=>dt[i.date]=(dt[i.date]||0)+ +i.amt);const topD=Object.entries(dt).sort((a,b)=>b[1]-a[1])[0];
+  $("mDay").textContent=topD?inr(topD[1]):"—";$("mDayN").textContent=topD?`${DOW[parse(topD[0]).getDay()].toLowerCase()} ${pad(parse(topD[0]).getDate())} ${MON[parse(topD[0]).getMonth()].toLowerCase()}`:"";
+  $("mZero").textContent=String(now.getDate()-activeDays);
+  // budget always covers all books
+  const allMt=sum(st.items.filter(i=>i.date.startsWith(mk)));
+  const left=st.budget-allMt,pct=st.budget?Math.max(0,Math.min(1,left/st.budget)):0,on=Math.round(pct*12);
+  $("sLeft").textContent=left<0?"-"+inr(-left):inr(left);
+  $("meter").innerHTML=Array.from({length:12},(_,i)=>`<i class="${i<on?"on":""}"></i>`).join("");$("meter").classList.toggle("low",pct<.25);
+  const dleft=new Date(now.getFullYear(),now.getMonth()+1,0).getDate()-now.getDate()+1;
+  $("sBudgetTxt").textContent=!st.budget?"set a monthly budget below":left<0?`${inr(-left)} over your ${inr(st.budget)} budget`:`of ${inr(st.budget)} · about ${inr(left/dleft)}/day for ${dleft} day${dleft>1?"s":""}`;
+  if(document.activeElement!==$("budget"))$("budget").value=st.budget||"";
+  const d7=[],l7=[];for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);d7.push(dt[iso(d)]||0);l7.push(i?DOW[d.getDay()].toLowerCase():"today");}
+  $("cDay").innerHTML=vbars(d7,l7,6);
+  const w8=[],lw=[];for(let i=7;i>=0;i--){const s=weekStart(now);s.setDate(s.getDate()-7*i);const e=new Date(s);e.setDate(s.getDate()+6);const a=iso(s),b=iso(e);
+    w8.push(sum(all.filter(x=>x.date>=a&&x.date<=b)));lw.push(i?`${s.getDate()} ${MON[s.getMonth()].toLowerCase()}`:"now");}
+  $("cWeek").innerHTML=vbars(w8,lw,7);
+  const m6=[],lm=[];for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1),k=iso(d).slice(0,7);m6.push(sum(all.filter(x=>x.date.startsWith(k))));lm.push(MON[d.getMonth()].toLowerCase());}
+  $("cMonth").innerHTML=vbars(m6,lm,5);
+  const src=catPer==="week"?wk:catPer==="month"?mo:all,ct=sum(src),by={};src.forEach(i=>{const k=catOf(i.cat).id;by[k]=(by[k]||0)+ +i.amt;});
+  const ranked=[...st.cats,LOST].map(c=>({...c,v:by[c.id]||0})).filter(c=>c.v).sort((a,b)=>b.v-a.v),mx=ranked[0]?ranked[0].v:1,W=12;
+  $("cCat").innerHTML=ranked.map(c=>{const k=Math.max(1,Math.round(c.v/mx*W));return `<div class="cat"><img src="${ico(c.icon)}" alt="" style="background:${c.tint}"><span>${esc(c.name.toLowerCase())}</span><span class="bar">${"█".repeat(k)}<b>${"░".repeat(W-k)}</b></span><span>${inr(c.v)} <span class="faint">${Math.round(c.v/ct*100)}%</span></span></div>`}).join("")||`<div class="empty">nothing in this period</div>`;
+  $("catPer").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===catPer));
+}
+$("scope").addEventListener("change",e=>{scope=e.target.value;renderStats();});
+$("catPer").addEventListener("click",e=>{const b=e.target.closest("[data-p]");if(!b)return;catPer=b.dataset.p;renderStats();});
+$("bf").addEventListener("submit",e=>{e.preventDefault();st.budget=Math.max(0,+$("budget").value||0);save();render();toast("BUDGET SET");});
+
+/* ---------- EDIT ---------- */
+let openIcons=null,confirmDel=null;
+function renderEditor(){
+  // books
+  $("bookRows").innerHTML=st.books.map(b=>{const n=inBook(b.id).length,other=st.books.find(x=>x.id!==b.id);
+    return `<div class="erow" data-bk="${b.id}">
+      <input type="color" id="bc-${b.id}" value="${b.cover}" data-f="cover" aria-label="Cover colour for ${esc(b.name)}" style="width:40px;height:40px">
+      <div class="efields"><input id="bn-${b.id}" value="${esc(b.name)}" maxlength="30" data-f="name" aria-label="Book name"><input class="sm" id="bs-${b.id}" value="${esc(b.sub||"")}" maxlength="30" data-f="sub" placeholder="cover label, e.g. volume 01" aria-label="Cover label">
+        <div class="bmeta"><span>${n} receipt${n===1?"":"s"} · ${inr(sum(inBook(b.id)))}</span>${b.id===st.book?"<span>★ current book</span>":`<button class="link" type="button" data-act="useBook" style="font-size:16px">make current</button>`}</div></div>
+      <span></span>
+      <button class="del" type="button" data-act="askBook" aria-label="Delete ${esc(b.name)}" ${st.books.length<2?"disabled style='visibility:hidden'":""}>✕</button>
+      ${confirmDel===b.id&&other?`<div class="confirm"><span>Delete this book?${n?` Its ${n} receipt${n===1?"":"s"} move to <b>${esc(other.name)}</b>.`:""}</span><span class="tools"><button class="link" type="button" data-act="delBook" style="color:var(--blush-d)">delete</button><button class="link" type="button" data-act="cancel">keep</button></span></div>`:""}
+    </div>`}).join("");
+  // categories
+  $("catRows").innerHTML=st.cats.map(c=>{const n=st.items.filter(i=>i.cat===c.id).length,other=st.cats.find(x=>x.id!==c.id);
+    return `<div class="erow" data-ct="${c.id}">
+      <button class="icobtn" type="button" data-act="icons" style="background:${c.tint}" aria-label="Change icon for ${esc(c.name)}" aria-expanded="${openIcons===c.id}"><img src="${ico(c.icon)}" alt=""></button>
+      <div class="efields"><input id="cn-${c.id}" value="${esc(c.name)}" maxlength="18" data-f="name" aria-label="Category name"><input class="sm" id="cs-${c.id}" value="${esc(c.shop||"")}" maxlength="22" data-f="shop" placeholder="shop name on receipt" aria-label="Shop name on receipt"></div>
+      <input type="color" id="ct-${c.id}" value="${c.tint}" data-f="tint" aria-label="Colour for ${esc(c.name)}">
+      <button class="del" type="button" data-act="askCat" aria-label="Delete ${esc(c.name)}" ${st.cats.length<2?"disabled style='visibility:hidden'":""}>✕</button>
+      ${openIcons===c.id?`<div class="icongrid">${Object.keys(ICONS).map(k=>`<button type="button" data-act="setIcon" data-icon="${k}" aria-pressed="${k===c.icon}" aria-label="${k} icon" style="background:${k===c.icon?c.tint:"var(--paper)"}"><img src="${ico(k)}" alt=""></button>`).join("")}</div>`:""}
+      ${confirmDel===c.id&&other?`<div class="confirm"><span>Delete this category?${n?` Its ${n} receipt${n===1?"":"s"} move to <b>${esc(other.name)}</b>.`:""}</span><span class="tools"><button class="link" type="button" data-act="delCat" style="color:var(--blush-d)">delete</button><button class="link" type="button" data-act="cancel">keep</button></span></div>`:""}
+    </div>`}).join("");
+  // theme
+  const T=[["accent","Accent","the pig, today's bars, highlights",["#ff8fb1","#ff9f6b","#7fc8a9","#8fb3ff","#b99cff","#f2c94c"]],
+           ["counter","Background","the table behind the receipts",["#f1efed","#f6eef0","#eef3ee","#eef1f6","#f5f1e6","#e9e6ee"]],
+           ["page","Book pages","the paper inside every book",["#fcfbf8","#ffffff","#fff8ef","#f7fbff","#fbf7ff","#f6fbf3"]]];
+  $("themeRows").innerHTML=T.map(([k,name,desc,sw])=>`<div class="crow"><div style="min-width:0"><div>${name}</div><div class="sub" style="margin:0">${desc}</div>
+      <div class="swatches" style="margin-top:6px">${sw.map(s=>`<button type="button" data-act="swatch" data-k="${k}" data-c="${s}" style="background:${s}" aria-label="${name} ${s}"></button>`).join("")}</div></div>
+      <input type="color" id="th-${k}" value="${st.theme[k]}" data-theme-k="${k}" aria-label="${name} colour"></div>`).join("");
+}
+function others(){applyTheme();NOS={};st.books.forEach(b=>ordered(inBook(b.id)).forEach((i,k)=>NOS[i.id]=k+1));
+  drawCats();drawBookSel();renderAdd();renderStats();if(view==="book")renderBook();drawLogo();}
+const ED=$("v-edit");
+ED.addEventListener("input",e=>{const t=e.target,f=t.dataset.f;
+  if(t.dataset.themeK){st.theme[t.dataset.themeK]=t.value;save();others();return;}
+  if(!f)return;
+  const br=t.closest("[data-bk]"),cr=t.closest("[data-ct]");
+  if(br){const b=st.books.find(x=>x.id===br.dataset.bk);b[f]=f==="name"?(t.value||"Untitled book"):t.value;}
+  if(cr){const c=st.cats.find(x=>x.id===cr.dataset.ct);c[f]=f==="name"?(t.value||"Unnamed"):f==="shop"?t.value.toUpperCase():t.value;
+    if(f==="tint"){const ib=cr.querySelector(".icobtn");if(ib)ib.style.background=t.value;}}
+  save();others();});
+ED.addEventListener("change",e=>{if(e.target.dataset.f==="shop"){e.target.value=e.target.value.toUpperCase();}});
+ED.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
+  const br=b.closest("[data-bk]"),cr=b.closest("[data-ct]");
+  if(a==="icons"){openIcons=openIcons===cr.dataset.ct?null:cr.dataset.ct;confirmDel=null;}
+  else if(a==="setIcon"){st.cats.find(x=>x.id===cr.dataset.ct).icon=b.dataset.icon;save();others();}
+  else if(a==="askCat"){confirmDel=cr.dataset.ct;openIcons=null;}
+  else if(a==="askBook"){confirmDel=br.dataset.bk;}
+  else if(a==="cancel"){confirmDel=null;}
+  else if(a==="delCat"){const id=cr.dataset.ct,to=st.cats.find(x=>x.id!==id);st.items.forEach(i=>{if(i.cat===id)i.cat=to.id;});st.cats=st.cats.filter(x=>x.id!==id);confirmDel=null;save();others();toast("CATEGORY DELETED");}
+  else if(a==="delBook"){const id=br.dataset.bk,to=st.books.find(x=>x.id!==id);st.items.forEach(i=>{if(i.book===id)i.book=to.id;});st.books=st.books.filter(x=>x.id!==id);if(st.book===id)st.book=to.id;confirmDel=null;bookPage=0;save();others();toast("BOOK DELETED");}
+  else if(a==="useBook"){st.book=br.dataset.bk;bookPage=0;save();others();toast("CURRENT BOOK CHANGED");}
+  else if(a==="swatch"){st.theme[b.dataset.k]=b.dataset.c;save();others();}
+  else return;
+  renderEditor();});
+$("addCat").onclick=()=>{const c={id:"c"+uid(),name:"New category",shop:"NEW SHOP",tint:PASTELS[st.cats.length%PASTELS.length],icon:"heart"};
+  st.cats.push(c);openIcons=c.id;save();others();renderEditor();const el=$("cn-"+c.id);if(el){el.focus();el.select();}};
+$("addBook").onclick=()=>{const b={id:"b"+uid(),name:"New book",sub:"volume 01",cover:PASTELS[(st.books.length+3)%PASTELS.length]};
+  st.books.push(b);save();others();renderEditor();const el=$("bn-"+b.id);if(el){el.focus();el.select();}toast("BOOK ADDED");};
+$("resetTheme").onclick=()=>{st.theme={...DEF_THEME};save();others();renderEditor();toast("COLOURS RESET");};
+$("copyB").onclick=()=>{const t=JSON.stringify(st);
+  navigator.clipboard.writeText(t).then(()=>toast("BACKUP COPIED")).catch(()=>{$("restoreBox").hidden=false;$("restoreTxt").value=t;$("restoreTxt").select();toast("SELECTED · COPY IT");});};
+$("restoreB").onclick=()=>{$("restoreBox").hidden=!$("restoreBox").hidden;};
+$("restoreGo").onclick=()=>{try{const d=JSON.parse($("restoreTxt").value);if(!Array.isArray(d.items))throw 0;st=Object.assign({budget:15000,seeded:true},d);migrate();save();bookPage=0;render();$("restoreBox").hidden=true;toast("RESTORED");}catch(e){toast("THAT ISN'T A BACKUP");}};
+$("wipe").onclick=()=>$("wipeBox").hidden=false;$("wipeNo").onclick=()=>$("wipeBox").hidden=true;
+$("wipeYes").onclick=()=>{st.items=[];save();bookPage=0;render();$("wipeBox").hidden=true;toast("ALL CLEAR");};
+
+/* ---------- MODAL ---------- */
+let openId=null;
+function openR(id){const i=st.items.find(x=>x.id===id);if(!i)return;openId=id;
+  $("modalR").innerHTML=receipt(i);
+  $("modalActs").innerHTML=`<button class="pill" type="button" id="mDel">remove receipt</button><button class="pill" type="button" id="mClose">close</button>`;
+  $("modal").hidden=false;$("mClose").focus();}
+function closeR(){$("modal").hidden=true;openId=null;}
+document.addEventListener("click",e=>{const o=e.target.closest("[data-open]");if(o&&$("modal").hidden)openR(o.dataset.open);
+  const g=e.target.closest("[data-goview]");if(g){location.hash=g.dataset.goview;setView(g.dataset.goview);}});
+document.addEventListener("keydown",e=>{const o=e.target.closest&&e.target.closest("[data-open]");if(o&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openR(o.dataset.open);}if(e.key==="Escape"&&!$("modal").hidden)closeR();});
+$("modal").addEventListener("click",e=>{
+  if(e.target.id==="modal"||e.target.id==="mClose")return closeR();
+  if(e.target.id==="mDel"){$("modalActs").innerHTML=`<span class="faint" style="width:100%;text-align:center">Remove this receipt for good?</span><button class="pill" type="button" id="mYes" style="border-color:var(--blush-d);color:var(--blush-d)">remove</button><button class="pill" type="button" id="mClose">keep it</button>`;return;}
+  if(e.target.id==="mYes"){st.items=st.items.filter(i=>i.id!==openId);save();closeR();render();toast("RECEIPT REMOVED");}});
+
+/* ---------- ROUTER ---------- */
+let view="add";
+const VIEWS=["add","book","stats","edit"];
+function setView(v){view=VIEWS.includes(v)?v:"add";
+  VIEWS.forEach(k=>$("v-"+k).hidden=k!==view);
+  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===view?"page":"false"));
+  if(view==="book")renderBook();if(view==="edit"){openIcons=null;confirmDel=null;renderEditor();}}
+document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(!b)return;location.hash=b.dataset.v;setView(b.dataset.v);});
+addEventListener("hashchange",()=>setView(location.hash.slice(1)));
+
+function drawLogo(){const mk=iso(new Date()).slice(0,7),mt=sum(st.items.filter(i=>i.date.startsWith(mk)));
+  drawPig($("logo"),st.budget&&(st.budget-mt)/st.budget<.25);
+  const n=new Date();$("clock").textContent=`${pad(n.getDate())} ${MON[n.getMonth()]} · ${pad(n.getHours())}:${pad(n.getMinutes())}`;}
+function render(){others();if(view==="edit")renderEditor();}
+$("date").value=iso(new Date());load();render();setView(location.hash.slice(1));
+</script>
+
+<script>
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}
+</script>
+</body>
+</html>
