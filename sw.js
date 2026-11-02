@@ -1,5 +1,5 @@
 // Penny Pages offline cache: keeps the app and its pixel fonts on the phone.
-const CACHE = "penny-pages-v1";
+const CACHE = "penny-pages-v2";
 const CORE = ["./", "./index.html", "./manifest.json", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {

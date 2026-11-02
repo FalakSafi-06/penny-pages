@@ -111,6 +111,10 @@ input[type="color"]::-moz-color-swatch{border:0}
 .r-bc{display:flex;justify-content:center;gap:.12em;height:1.9em;margin:.8em 0 .35em}
 .r-bc i{background:var(--ink);display:block}
 .r-foot{text-align:center;color:var(--faint);font-size:.75em}
+.r-memo{margin-top:.6em;padding:.4em .5em;border:.1em dashed var(--rule);font-size:.8em;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
+.mini .r-memo,.page .r-memo{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+textarea.memo{min-height:0;margin:0;background:transparent;border:0;border-bottom:2px solid var(--ink);padding:3px 0;font-size:19px;resize:vertical;border-radius:0}
+textarea.memo:focus{outline:none;border-bottom-color:var(--blush-d)}
 .mini .nt,.page .nt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* book */
@@ -230,8 +234,11 @@ textarea{width:100%;min-height:80px;font-family:var(--body);font-size:15px;color
       </div>
       <div class="row">
         <label for="note">WHAT FOR<input id="note" maxlength="40" placeholder="chai with friends"></label>
-        <label for="bookSel">BOOK<select id="bookSel"></select></label>
+        <label for="shopIn">SHOP NAME<input id="shopIn" maxlength="24" list="shopList" autocomplete="off"></label>
       </div>
+      <datalist id="shopList"></datalist>
+      <label for="memo">NOTES · OPTIONAL<textarea id="memo" class="memo" maxlength="160" rows="2" placeholder="split the bill, owe ₹40"></textarea></label>
+      <label for="bookSel">BOOK<select id="bookSel"></select></label>
       <div class="cats" id="cats" role="group" aria-label="Category"></div>
       <button class="go" type="submit">PRINT RECEIPT</button>
     </form>
@@ -427,13 +434,14 @@ function receipt(i,opts={}){
   let h=hash(i.id),bc="";for(let k=0;k<26;k++){h=Math.imul(h,1103515245)+12345>>>0;bc+=`<i style="width:${.08+((h>>>16)%3)*.08}em"></i>`;}
   const rot=opts.rot?`--rot:${((hash(i.id)%7)-3)*.8}deg;`:"";
   return `<div class="rw" style="--tint:${c.tint};${rot}" ${opts.open?`data-open="${i.id}" role="button" tabindex="0" aria-label="Open receipt ${esc(i.note||c.name)}"`:""}><article class="rcpt zig">
-    <div class="r-top"><span class="r-ico"><img src="${ico(c.icon)}" alt=""></span><span class="shop">${esc(c.shop||c.name.toUpperCase())}</span>
+    <div class="r-top"><span class="r-ico"><img src="${ico(c.icon)}" alt=""></span><span class="shop">${esc(i.shop||c.shop||c.name.toUpperCase())}</span>
     <span class="r-meta">No.${String(NOS[i.id]||0).padStart(4,"0")} · ${pad(d.getDate())} ${MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}${tm?" · "+pad(tm.getHours())+":"+pad(tm.getMinutes()):""}</span></div>
     <div class="r-rule"></div>
     <div class="r-line"><span class="nt">${esc(i.note||c.name.toLowerCase())}</span><span>${inr(i.amt)}</span></div>
     <div class="r-line r-sm"><span>1 × ${esc(c.name.toLowerCase())}</span><span>${i.ex?"sample":"paid"}</span></div>
     <div class="r-rule"></div>
     <div class="r-line r-total"><span>TOTAL</span><span>${inr(i.amt)}</span></div>
+    ${i.memo?`<div class="r-memo">✎ ${esc(i.memo)}</div>`:""}
     <div class="r-bc" aria-hidden="true">${bc}</div>
     <div class="r-foot">thank you ♡</div></article></div>`;
 }
@@ -449,6 +457,7 @@ function drawPig(cv,worried){
 /* ---------- PRINT ---------- */
 let cat=null,justPrinted=null;
 function drawCats(){if(!st.cats.find(c=>c.id===cat))cat=st.cats[0].id;
+  $("shopIn").placeholder=(catOf(cat).shop||"shop name").toLowerCase();
   $("cats").innerHTML=st.cats.map(c=>`<button type="button" data-c="${c.id}" aria-pressed="${c.id===cat}"><img src="${ico(c.icon)}" alt="" style="background:${c.tint}"><span>${esc(c.name.toLowerCase())}</span></button>`).join("");}
 $("cats").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;cat=b.dataset.c;drawCats();});
 function drawBookSel(){$("bookSel").innerHTML=st.books.map(b=>`<option value="${b.id}" ${b.id===st.book?"selected":""}>${esc(b.name)}</option>`).join("");}
@@ -462,12 +471,14 @@ function renderAdd(){
   $("recentLbl").textContent="RECENT · "+bookOf(st.book).name.toUpperCase();
   $("recent").innerHTML=byNew.slice(last?1:0,13).map(i=>receipt(i,{open:true})).join("")||`<p class="empty">no other receipts in this book yet</p>`;
   $("sampleNote").hidden=!st.items.some(i=>i.ex);
+  const shops=[...new Set(st.items.map(i=>i.shop).filter(Boolean).concat(st.cats.map(c=>c.shop).filter(Boolean)))];
+  $("shopList").innerHTML=shops.map(s=>`<option value="${esc(s)}"></option>`).join("");
 }
 $("f").addEventListener("submit",e=>{e.preventDefault();const a=parseFloat($("amt").value);
   if(!(a>0)){toast("ENTER AN AMOUNT");return;}
   const id=uid();
-  st.items.push({id,amt:a,cat,note:$("note").value.trim(),date:$("date").value||iso(new Date()),t:Date.now(),book:st.book});
-  justPrinted=id;save();render();$("amt").value="";$("note").value="";toast("RECEIPT PRINTED");});
+  st.items.push({id,amt:a,cat,note:$("note").value.trim(),shop:$("shopIn").value.trim().toUpperCase(),memo:$("memo").value.trim(),date:$("date").value||iso(new Date()),t:Date.now(),book:st.book});
+  justPrinted=id;save();render();$("amt").value="";$("note").value="";$("shopIn").value="";$("memo").value="";toast("RECEIPT PRINTED");});
 $("clearSamples").onclick=()=>{st.items=st.items.filter(i=>!i.ex);save();bookPage=0;render();toast("SAMPLES CLEARED");};
 
 /* ---------- BOOK ---------- */
