@@ -202,6 +202,9 @@ textarea{width:100%;min-height:80px;font-family:var(--body);font-size:15px;color
 .crow{display:flex;align-items:center;gap:12px;justify-content:space-between}
 .swatches{display:flex;gap:6px;flex-wrap:wrap}
 .swatches button{width:22px;height:22px;border:2px solid var(--ink);cursor:pointer;padding:0}
+.panel{border:2px dashed var(--ink);padding:12px;margin-top:12px;display:grid;gap:10px}
+.panel textarea{margin:0}
+.panel .go{padding:10px 14px}
 
 /* modal */
 .modal{position:fixed;inset:0;background:rgba(38,35,38,.45);display:grid;place-items:center;z-index:20;padding:20px max(16px,env(safe-area-inset-right,0px)) 20px max(16px,env(safe-area-inset-left,0px));overflow:auto}
@@ -259,7 +262,7 @@ textarea{width:100%;min-height:80px;font-family:var(--body);font-size:15px;color
       <span class="pg" id="pgLbl"></span>
       <button class="pill" type="button" id="next" aria-label="Next page">next ▶</button>
     </div>
-    <div class="tools" style="margin-top:12px"><button class="link" type="button" id="toCover">cover</button><button class="link" type="button" id="toToday">latest page</button><button class="link" type="button" data-goview="edit">edit books</button></div>
+    <div class="tools" style="margin-top:12px"><button class="link" type="button" id="toCover">cover</button><button class="link" type="button" id="toToday">latest page</button><button class="link" type="button" id="shareCur">share this book</button><button class="link" type="button" data-goview="edit">edit books</button></div>
   </div>
 </section>
 
@@ -319,8 +322,15 @@ textarea{width:100%;min-height:80px;font-family:var(--body);font-size:15px;color
   <div class="sw wide"><div class="slip zig">
     <div class="c"><div class="lbl" style="justify-content:center">EDIT</div><div class="faint">changes save as you type</div></div>
     <hr>
-    <div class="lbl"><span>BOOKS</span><button class="link" type="button" id="addBook">+ new book</button></div>
+    <div class="lbl"><span>BOOKS</span><span class="tools" style="gap:14px"><button class="link" type="button" id="addBook">+ new book</button><button class="link" type="button" id="importBtn">+ add a shared book</button></span></div>
     <div class="erows" id="bookRows"></div>
+    <div class="panel" id="sharePanel" hidden></div>
+    <div class="panel" id="importPanel" hidden>
+      <div class="lbl" style="margin:0"><span>ADD A SHARED BOOK</span><button class="link" type="button" data-act2="closeImport">close</button></div>
+      <textarea id="importTxt" placeholder="paste the whole message, link or code you were sent"></textarea>
+      <div class="sub" style="margin:0">On iPhone, shared links open in Safari, not the home-screen app. If you use the installed app, paste the message here inside the app.</div>
+      <div id="importPrev"></div>
+    </div>
     <hr>
     <div class="lbl"><span>CATEGORIES</span><button class="link" type="button" id="addCat">+ new category</button></div>
     <div class="sub">tap an icon to change it · top line is the name, bottom line is the shop on the receipt</div>
@@ -598,7 +608,7 @@ function renderEditor(){
     return `<div class="erow" data-bk="${b.id}">
       <input type="color" id="bc-${b.id}" value="${b.cover}" data-f="cover" aria-label="Cover colour for ${esc(b.name)}" style="width:40px;height:40px">
       <div class="efields"><input id="bn-${b.id}" value="${esc(b.name)}" maxlength="30" data-f="name" aria-label="Book name"><input class="sm" id="bs-${b.id}" value="${esc(b.sub||"")}" maxlength="30" data-f="sub" placeholder="cover label, e.g. volume 01" aria-label="Cover label">
-        <div class="bmeta"><span>${n} receipt${n===1?"":"s"} · ${inr(sum(inBook(b.id)))}</span>${b.id===st.book?"<span>★ current book</span>":`<button class="link" type="button" data-act="useBook" style="font-size:16px">make current</button>`}</div></div>
+        <div class="bmeta"><span>${n} receipt${n===1?"":"s"} · ${inr(sum(inBook(b.id)))}</span><button class="link" type="button" data-act="shareBook" style="font-size:16px">share</button>${b.id===st.book?"<span>★ current book</span>":`<button class="link" type="button" data-act="useBook" style="font-size:16px">make current</button>`}</div></div>
       <span></span>
       <button class="del" type="button" data-act="askBook" aria-label="Delete ${esc(b.name)}" ${st.books.length<2?"disabled style='visibility:hidden'":""}>✕</button>
       ${confirmDel===b.id&&other?`<div class="confirm"><span>Delete this book?${n?` Its ${n} receipt${n===1?"":"s"} move to <b>${esc(other.name)}</b>.`:""}</span><span class="tools"><button class="link" type="button" data-act="delBook" style="color:var(--blush-d)">delete</button><button class="link" type="button" data-act="cancel">keep</button></span></div>`:""}
@@ -638,6 +648,7 @@ ED.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b)ret
   if(a==="icons"){openIcons=openIcons===cr.dataset.ct?null:cr.dataset.ct;confirmDel=null;}
   else if(a==="setIcon"){st.cats.find(x=>x.id===cr.dataset.ct).icon=b.dataset.icon;save();others();}
   else if(a==="askCat"){confirmDel=cr.dataset.ct;openIcons=null;}
+  else if(a==="shareBook"){openShare(br.dataset.bk);return;}
   else if(a==="askBook"){confirmDel=br.dataset.bk;}
   else if(a==="cancel"){confirmDel=null;}
   else if(a==="delCat"){const id=cr.dataset.ct,to=st.cats.find(x=>x.id!==id);st.items.forEach(i=>{if(i.cat===id)i.cat=to.id;});st.cats=st.cats.filter(x=>x.id!==id);confirmDel=null;save();others();toast("CATEGORY DELETED");}
@@ -657,6 +668,78 @@ $("restoreB").onclick=()=>{$("restoreBox").hidden=!$("restoreBox").hidden;};
 $("restoreGo").onclick=()=>{try{const d=JSON.parse($("restoreTxt").value);if(!Array.isArray(d.items))throw 0;st=Object.assign({budget:15000,seeded:true},d);migrate();save();bookPage=0;render();$("restoreBox").hidden=true;toast("RESTORED");}catch(e){toast("THAT ISN'T A BACKUP");}};
 $("wipe").onclick=()=>$("wipeBox").hidden=false;$("wipeNo").onclick=()=>$("wipeBox").hidden=true;
 $("wipeYes").onclick=()=>{st.items=[];save();bookPage=0;render();$("wipeBox").hidden=true;toast("ALL CLEAR");};
+
+/* ---------- SHARING ---------- */
+const b64=u8=>{let s="";for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode(...u8.subarray(i,i+8192));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");};
+const unb64=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");const bin=atob(s),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;};
+async function pack(obj){const raw=new TextEncoder().encode(JSON.stringify(obj));
+  if(window.CompressionStream){try{const z=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer());return "PPz."+b64(z);}catch(e){}}
+  return "PP."+b64(raw);}
+async function unpack(text){const m=String(text).match(/(PPz?)\.([A-Za-z0-9_-]{8,})/);if(!m)throw "bad";let u;
+  try{u=unb64(m[2]);}catch(e){throw "bad";}
+  if(m[1]==="PPz"){if(!window.DecompressionStream)throw "old";try{u=new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());}catch(e){throw "bad";}}
+  let d;try{d=JSON.parse(new TextDecoder().decode(u));}catch(e){throw "bad";}
+  if(!d||d.v!==1||!d.book||!Array.isArray(d.items))throw "bad";return d;}
+const hexOk=c=>/^#[0-9a-f]{6}$/i.test(c||"");
+function bookPayload(id){const b=bookOf(id);if(!b.sid){b.sid=uid()+uid();save();}
+  const items=inBook(id).filter(i=>!i.ex),used=new Set(items.map(i=>i.cat));
+  return {v:1,sid:b.sid,at:Date.now(),book:{name:b.name,sub:b.sub,cover:b.cover},
+    cats:st.cats.filter(c=>used.has(c.id)).map(({id,name,shop,tint,icon})=>({id,name,shop,tint,icon})),
+    items:items.map(({amt,cat,note,shop,memo,date,t})=>({amt,cat,note,shop,memo,date,t}))};}
+let shareState=null,importState=null;
+async function openShare(id){
+  $("importPanel").hidden=true;const p=$("sharePanel");p.hidden=false;p.innerHTML=`<div class="faint">getting it ready…</div>`;
+  const b=bookOf(id),data=bookPayload(id),code=await pack(data);
+  const link=/^https?:$/.test(location.protocol)&&window.top===window?`${location.origin}${location.pathname}#import=${code}`:"";
+  const n=data.items.length,tot=sum(data.items),skipped=inBook(id).some(i=>i.ex);
+  const text=`Penny Pages book: "${b.name}" · ${n} receipt${n===1?"":"s"} · ${inr(tot)}\n`+
+    (link?`Open it: ${link}\n\nUsing the app? Go to edit → add a shared book and paste this whole message.`
+         :`To add it, open Penny Pages, go to edit → add a shared book and paste this whole message:\n${code}`);
+  shareState={text};
+  p.innerHTML=`<div class="lbl" style="margin:0"><span>SHARE · ${esc(b.name.toUpperCase())}</span><button class="link" type="button" data-act2="closeShare">close</button></div>
+    <div class="sub" style="margin:0">${n} receipt${n===1?"":"s"} · ${inr(tot)}${skipped?" · sample receipts left out":""}. They get their own copy. Receipts you add later reach them only when you share again, and they can update their copy in one tap.</div>
+    <div class="tools">${navigator.share?`<button class="go" type="button" data-act2="send">SEND</button>`:""}<button class="go" type="button" data-act2="copy">COPY MESSAGE</button></div>
+    <textarea id="shareTxt" readonly aria-label="Message to share">${esc(text)}</textarea>`;
+  p.scrollIntoView({block:"nearest",behavior:"smooth"});}
+function copyShare(){const t=shareState.text,fb=()=>{const ta=$("shareTxt");ta.focus();ta.select();toast("SELECTED · COPY IT");};
+  try{navigator.clipboard.writeText(t).then(()=>toast("MESSAGE COPIED")).catch(fb);}catch(e){fb();}}
+function openImport(text){$("sharePanel").hidden=true;$("importPanel").hidden=false;$("importTxt").value=text||"";$("importPrev").innerHTML="";importState=null;
+  if(text)checkImport();else $("importTxt").focus();
+  $("importPanel").scrollIntoView({block:"nearest",behavior:"smooth"});}
+async function checkImport(){const t=$("importTxt").value;if(!t.trim()){$("importPrev").innerHTML="";importState=null;return;}
+  try{const d=await unpack(t);importState=d;const ex=st.books.find(b=>b.sid===d.sid),n=d.items.length;
+    $("importPrev").innerHTML=`<div class="note"><span><b style="font-weight:400">${esc(d.book.name)}</b> · ${n} receipt${n===1?"":"s"} · ${inr(sum(d.items))}</span>
+      <span class="tools">${ex?`<button class="link" type="button" data-act2="imp" data-mode="replace">update "${esc(ex.name)}"</button>`:""}<button class="link" type="button" data-act2="imp" data-mode="new">add as ${ex?"another":"a new"} book</button></span></div>
+      ${ex?`<div class="sub" style="margin:6px 0 0">Updating swaps the receipts in "${esc(ex.name)}" for these.</div>`:""}`;}
+  catch(e){importState=null;$("importPrev").innerHTML=`<div class="sub" style="margin:0">${e==="old"?"This browser is too old to open this book. Update iOS or Chrome and try again.":"That doesn't look like a Penny Pages book. Paste the whole message or link you were sent."}</div>`;}}
+function doImport(d,mode){
+  const map={};
+  (d.cats||[]).forEach(c=>{const nm=String(c.name||"Other").slice(0,18);
+    let m=st.cats.find(x=>x.id===c.id&&x.name.toLowerCase()===nm.toLowerCase())||st.cats.find(x=>x.name.toLowerCase()===nm.toLowerCase());
+    if(!m){m={id:"c"+uid(),name:nm,shop:String(c.shop||"").slice(0,22).toUpperCase(),tint:hexOk(c.tint)?c.tint:PASTELS[st.cats.length%PASTELS.length],icon:ICONS[c.icon]?c.icon:"other"};st.cats.push(m);}
+    map[c.id]=m.id;});
+  const book={name:String(d.book.name||"Shared book").slice(0,30),sub:String(d.book.sub||"").slice(0,30),cover:hexOk(d.book.cover)?d.book.cover:"#ffdbe6"};
+  let bk=mode==="replace"&&st.books.find(b=>b.sid===d.sid);
+  if(bk){st.items=st.items.filter(i=>i.book!==bk.id);Object.assign(bk,book);}
+  else{if(st.books.some(b=>b.name===book.name))book.name=(book.name+" (shared)").slice(0,30);
+    bk={id:"b"+uid(),...book,sid:st.books.some(b=>b.sid===d.sid)?uid()+uid():d.sid};st.books.push(bk);}
+  d.items.forEach(i=>{const amt=+i.amt;if(!(amt>0)||!/^\d{4}-\d{2}-\d{2}$/.test(i.date||""))return;
+    st.items.push({id:uid(),amt,cat:map[i.cat]||st.cats[0].id,note:String(i.note||"").slice(0,40),shop:String(i.shop||"").slice(0,24).toUpperCase(),memo:String(i.memo||"").slice(0,160),date:i.date,t:+i.t||undefined,book:bk.id});});
+  st.book=bk.id;bookPage=0;save();
+  $("importPanel").hidden=true;$("importTxt").value="";importState=null;
+  render();toast(mode==="replace"?"BOOK UPDATED":"BOOK ADDED");location.hash="book";setView("book");}
+function checkHashImport(){const h=location.hash;if(!h.startsWith("#import="))return false;const code=h.slice(8);
+  try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}
+  setView("edit");openImport(code);return true;}
+$("v-edit").addEventListener("click",e=>{const b=e.target.closest("[data-act2]");if(!b)return;const a=b.dataset.act2;
+  if(a==="closeShare")$("sharePanel").hidden=true;
+  else if(a==="closeImport")$("importPanel").hidden=true;
+  else if(a==="send")navigator.share({title:"Penny Pages book",text:shareState.text}).catch(err=>{if(!err||err.name!=="AbortError")copyShare();});
+  else if(a==="copy")copyShare();
+  else if(a==="imp"&&importState)doImport(importState,b.dataset.mode);});
+$("importBtn").onclick=()=>openImport("");
+let ciT;$("importTxt").addEventListener("input",()=>{clearTimeout(ciT);ciT=setTimeout(checkImport,250);});
+$("shareCur").onclick=()=>{location.hash="edit";setView("edit");openShare(st.book);};
 
 /* ---------- MODAL ---------- */
 let openId=null;
@@ -681,13 +764,13 @@ function setView(v){view=VIEWS.includes(v)?v:"add";
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===view?"page":"false"));
   if(view==="book")renderBook();if(view==="edit"){openIcons=null;confirmDel=null;renderEditor();}}
 document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(!b)return;location.hash=b.dataset.v;setView(b.dataset.v);});
-addEventListener("hashchange",()=>setView(location.hash.slice(1)));
+addEventListener("hashchange",()=>{if(!checkHashImport())setView(location.hash.slice(1));});
 
 function drawLogo(){const mk=iso(new Date()).slice(0,7),mt=sum(st.items.filter(i=>i.date.startsWith(mk)));
   drawPig($("logo"),st.budget&&(st.budget-mt)/st.budget<.25);
   const n=new Date();$("clock").textContent=`${pad(n.getDate())} ${MON[n.getMonth()]} · ${pad(n.getHours())}:${pad(n.getMinutes())}`;}
 function render(){others();if(view==="edit")renderEditor();}
-$("date").value=iso(new Date());load();render();setView(location.hash.slice(1));
+$("date").value=iso(new Date());load();render();if(!checkHashImport())setView(location.hash.slice(1));
 </script>
 
 <script>
